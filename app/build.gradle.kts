@@ -38,6 +38,7 @@ tasks.getByName<JavaExec>("run") {
 
 dependencies {
     val classifier = Lwjgl.requireNativesName()
+    implementation("org.joml:joml:1.10.8")
     Lwjgl.modules.forEach { name ->
         implementation(group = Lwjgl.group, name = name, version = Version.lwjgl)
         runtimeOnly(group = Lwjgl.group, name = name, version = Version.lwjgl, classifier = classifier)

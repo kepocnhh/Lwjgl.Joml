@@ -1,75 +1,60 @@
 package test.lwjgl.joml
 
+import org.joml.Matrix4d
+import org.joml.Matrix4f
+import org.joml.Vector2d
+import org.joml.Vector3d
+import org.lwjgl.BufferUtils
 import org.lwjgl.glfw.GLFW
-import org.lwjgl.glfw.GLFWErrorCallback
 import org.lwjgl.glfw.GLFWKeyCallback
-import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11
-import org.lwjgl.system.MemoryUtil
 
 fun main() {
-    GLFWErrorCallback.createPrint(System.err).set()
-    check(GLFW.glfwInit()) { "Unable to initialize GLFW!" }
-    val monitorId = GLFW.glfwGetPrimaryMonitor()
-    check(monitorId != MemoryUtil.NULL) { "Monitor id is null!" }
-    //
-    GLFW.glfwDefaultWindowHints()
-    GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_TRUE) // todo
-    GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_FALSE) // todo
-    val width = 640
-    val height = 480
-    val windowId = GLFW.glfwCreateWindow(
-        width,
-        height,
-        "Lwjgl.Joml",
-        MemoryUtil.NULL,
-        MemoryUtil.NULL,
-    )
-    check(windowId != MemoryUtil.NULL) { "Window id is null!" }
-    val mode = GLFW.glfwGetVideoMode(monitorId) ?: error("Failed to get video mode by monitor: $monitorId")
-    val xPosition = (mode.width() - width) / 2
-    val yPosition = (mode.height() - height) / 2
-    GLFW.glfwSetWindowPos(
-        windowId,
-        xPosition,
-        yPosition,
-    )
-    //
-    GLFW.glfwMakeContextCurrent(windowId)
-    GL.createCapabilities()
-    GLFW.glfwSwapInterval(1)
-    val onKeyCallback = object : GLFWKeyCallback() {
-        override fun invoke(window: Long, key: Int, scancode: Int, action: Int, mods: Int) {
-            when (key) {
-                GLFW.GLFW_KEY_ESCAPE -> {
-                    GLFW.glfwSetWindowShouldClose(windowId, true)
+    val width = 640f
+    val height = 480f
+    val fb = BufferUtils.createFloatBuffer(16)
+    var x = 0f
+    var y = 0f
+    var z = -1f
+    TestEngine.run(
+        width = width.toInt(),
+        height = height.toInt(),
+        onKeyCallback = object : GLFWKeyCallback() {
+            override fun invoke(windowId: Long, key: Int, scancode: Int, action: Int, mods: Int) {
+                when (key) {
+                    GLFW.GLFW_KEY_ESCAPE -> {
+                        GLFW.glfwSetWindowShouldClose(windowId, true)
+                    }
+                    else -> Unit
                 }
-                else -> Unit
             }
-        }
-    }
-    GLFW.glfwSetKeyCallback(windowId, onKeyCallback)
-    GLFW.glfwShowWindow(windowId)
-    //
-    GL11.glClearColor(0f, 0f, 0f, 1f)
-    val timeMax = (1_000_000.0 / mode.refreshRate()).toLong()
-    var timeLast = System.nanoTime() / 1_000
-    //
-    GL11.glLineWidth(1f)
-    GL11.glEnable(GL11.GL_BLEND)
-    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
-    GL11.glDisable(GL11.GL_SMOOTH)
-    GL11.glDisable(GL11.GL_POINT_SMOOTH)
-    GL11.glDisable(GL11.GL_LINE_SMOOTH)
-    GL11.glDisable(GL11.GL_POLYGON_SMOOTH)
-    //
-    while (!GLFW.glfwWindowShouldClose(windowId)) {
-        val timeNow = System.nanoTime() / 1_000
-        if (timeNow - timeLast < timeMax) continue
-        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT or GL11.GL_DEPTH_BUFFER_BIT)
-        GLFW.glfwPollEvents()
-        // todo
-        GLFW.glfwSwapBuffers(windowId)
-        timeLast = timeNow
-    }
+        },
+        onRender = { windowId: Long, diff: Long ->
+            if (GLFW.glfwGetKey(windowId, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) {
+                x -= 1.0f * diff.toFloat() / 1_000f
+            } else if (GLFW.glfwGetKey(windowId, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) {
+                x += 1.0f * diff.toFloat() / 1_000f
+            } else if (GLFW.glfwGetKey(windowId, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) {
+                y += 1.0f * diff.toFloat() / 1_000f
+            } else if (GLFW.glfwGetKey(windowId, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) {
+                y -= 1.0f * diff.toFloat() / 1_000f
+            } else if (GLFW.glfwGetKey(windowId, GLFW.GLFW_KEY_Z) == GLFW.GLFW_PRESS) {
+                z -= 1.0f * diff.toFloat() / 1_000f
+            } else if (GLFW.glfwGetKey(windowId, GLFW.GLFW_KEY_X) == GLFW.GLFW_PRESS) {
+                z += 1.0f * diff.toFloat() / 1_000f
+            }
+            val model = Matrix4f()
+            val view = Matrix4f().translation(x, y, z)
+            val projection = Matrix4f()
+            projection.setPerspective(org.joml.Math.PI_OVER_2_f, width / height, 0.1f, 100f)
+            GL11.glLoadMatrixf(projection.mul(view.mul(model)).get(fb))
+            GL11.glColor4f(1f, 0f, 0f, 1f)
+            GL11.glBegin(GL11.GL_QUADS)
+            GL11.glVertex3f(-.0f, -.0f, 0f)
+            GL11.glVertex3f(+.5f, -.0f, 0f)
+            GL11.glVertex3f(+.5f, +.5f, 0f)
+            GL11.glVertex3f(-.0f, +.5f, 0f)
+            GL11.glEnd()
+        },
+    )
 }
